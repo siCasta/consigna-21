@@ -1,6 +1,10 @@
 import { v4 as uuid } from 'uuid'
 
-import { ProductData } from '../types/models.js'
+import {
+	ProductData,
+	ProductDataFilter,
+	ProductDataKey
+} from '../types/models.js'
 
 export default class ProductMemory {
 	private data: Array<ProductData>
@@ -28,6 +32,14 @@ export default class ProductMemory {
 		]
 	}
 
+	private static matches<T, K extends keyof T>(query: Pick<T, K>, data: T) {
+		for (const [k, v] of Object.entries(query)) {
+			if (data[k as K] !== v) return false
+		}
+
+		return true
+	}
+
 	insertOne(values: Omit<ProductData, 'id'>) {
 		const id = uuid()
 
@@ -37,12 +49,14 @@ export default class ProductMemory {
 		}
 
 		this.data = [...this.data, item]
+
+		return item
 	}
 
-	findOne(id: string) {
-		const item = this.data.find(i => (i.id = id))
+	findOne<T extends ProductDataKey>(query: ProductDataFilter<T>) {
+		const item = this.data.find(i => ProductMemory.matches(query, i))
 
-		if (!item) throw Error('The product id does not exists')
+		if (!item) null
 
 		return item
 	}
@@ -51,9 +65,22 @@ export default class ProductMemory {
 		return this.data
 	}
 
-	updateOne(id: string, values: Omit<ProductData, 'id'>) {
-		const item = this.data.find(i => (i.id = id))
+	updateOne<T extends ProductDataKey, K extends ProductDataKey>(
+		query: ProductDataFilter<T>,
+		values: ProductDataFilter<K>
+	) {
+		const item = this.findOne(query)
 
 		if (!item) throw Error('The product id does not exists')
+
+		const newItem: ProductData = { ...item, ...values }
+
+		this.data = this.data.map(i =>
+			ProductMemory.matches(query, i) ? newItem : i
+		)
+	}
+
+	deleteOne<T extends ProductDataKey>(query: ProductDataFilter<T>) {
+		this.data = this.data.filter(i => !ProductMemory.matches(query, i))
 	}
 }

@@ -17,4 +17,11 @@ app.use(express.static(join(__dirname, '..', 'public')))
 // routes
 app.use('/api', apiRoutes)
 
+// 404
+app.use((_req, res, _next) => {
+	res.json({
+		error: 'Not found 😶‍🌫️'
+	})
+})
+
 export default app
